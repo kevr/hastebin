@@ -44,14 +44,15 @@ def post_paste(text):
     return 0, response.content.decode().rstrip()
 
 def main():
-    help_description = "Upload text from stdin to HASTEBIN_SERVER_URL. If "
+    help_description = "Upload text from stdin to HASTEBIN_SERVER_URL "
+    help_description += "(default: 'https://hastebin.com'). If "
     help_description += "[id] is provided, the corresponding paste is fetched "
     help_description += "and displayed."
     parser = argparse.ArgumentParser(description=help_description)
     parser.add_argument("--clip-command", "-cc",
             metavar="clip_command",
-            default="xclip -sel primary",
-            help="clipboard pipe command (default: 'xclip -sel primary')")
+            default=os.environ.get("HASTEBIN_CLIPPER", "xclip -sel primary"),
+            help="clipboard command (default: $HASTEBIN_CLIPPER, 'xclip -sel primary')")
     parser.add_argument("--clipboard", "-c",
             metavar="clipboard",
             action="store_const",
