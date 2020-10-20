@@ -1,56 +1,106 @@
 #!/usr/bin/env python3
 # Project: hastebin
-# Author: kevr <kevin.morris@codestruct.net>
+# Author: Kevin Morris <kevr@0cost.org>
 # Description: A tool which uploads data from stdin to hastebin.com
-# Copyright (C) 2017 Kevin Morris
+# Copyright (C) 2017 Kevin Morris <kevr@0cost.org>
 # Copyright (C) 2020 Denis Zheleztsov <difrex@lessmore.pw>
-
 import sys
 import os
 import requests
 import json
 from select import select
+import argparse
+from subprocess import Popen
 
-
-# Hastebin server url
 url = os.environ.get("HASTEBIN_SERVER_URL", "https://hastebin.com")
-# Connection timeout
 timeout = int(os.environ.get("HASTEBIN_SERVER_TIMEOUT", 5))
-
 
 def has_data(fd):
     """Immediately timed out select poll"""
     return select([fd], [], [], 0.0) == ([fd], [], [])
-
 
 def quit(code, msg):
     """Print message to the STDERR and returns exit code"""
     sys.stderr.write(msg + "\n")
     return code
 
+def get_paste(id):
+    paste_url = f"{url}/raw/{id}"
+    response = requests.get(paste_url, timeout=timeout)
 
-## Sorry for the C-style functions, I prefer them
-def main():
-    if not has_data(sys.stdin):
-        return quit(1, "hastebin: no data given via stdin")
-
-    try:
-        stdin = sys.stdin.read()
-    except UnicodeDecodeError:
-        return quit(2, "hastebin: an error occured reading stdin")
-        
-    response = requests.post("%s/documents" % url, headers={
-      "Accept": "application/json"}, data=stdin)
     if response.status_code != requests.codes.ok:
-      return quit(3, "hastebin: error submitting POST data to hastebin")
+      return 3, "error: bad response from '{}'".format(paste_url)
 
-    content = response.content.decode("UTF-8").rstrip()
-    data = json.loads(content)
+    return 0, response.content.decode().rstrip()
 
-    print("%s/%s" % (url, data["key"]))
+def post_paste(text):
+    response = requests.post("%s/documents" % url, headers={
+      "Accept": "application/json"}, data=text,
+      timeout=timeout)
+
+    if response.status_code != requests.codes.ok:
+      return 3, "error: bad response from '{}'".format(paste_url)
+
+    return 0, response.content.decode().rstrip()
+
+def main():
+    help_description = "Upload text from stdin to HASTEBIN_SERVER_URL. If "
+    help_description += "[id] is provided, the corresponding paste is fetched "
+    help_description += "and displayed."
+    parser = argparse.ArgumentParser(description=help_description)
+    parser.add_argument("--clip-command", "-cc",
+            metavar="clip_command",
+            default="xclip -sel primary",
+            help="clipboard pipe command (default: 'xclip -sel primary')")
+    parser.add_argument("--clipboard", "-c",
+            metavar="clipboard",
+            action="store_const",
+            const=True,
+            default=False,
+            help="pipe stdout to --clip-command")
+    parser.add_argument("id",
+            nargs="?",
+            help="when provided, fetches and displays a hastebin paste")
+    args = parser.parse_args()
+
+    if args.id is not None:
+        if args.id[:4] == "http" and args.id[:len(url)] != url:
+            return quit(1,
+                f"error: invalid id provided; URLs must begin with '{url}'")
+
+        paste_id = args.id.split("/")[-1]
+        if not paste_id:
+            return quit(1, "error: no id provided")
+
+        return_code, response = get_paste(paste_id)
+        if return_code != 0:
+            return quit(return_code, response)
+        print(response)
+    else:
+        if not has_data(sys.stdin):
+            return quit(1, "error: no data given via stdin")
+
+        try:
+            stdin = sys.stdin.read()
+        except UnicodeDecodeError:
+            return quit(2, "error: an error occured reading stdin")
+
+        return_code, response = post_paste(stdin)
+        if return_code != 0:
+            return quit(return_code, response)
+        
+        data = json.loads(response)
+        uri = f'{url}/{data["key"]}'
+        print(uri)
+
+        if args.clipboard:
+            proc = Popen([
+                "/bin/sh", "-c",
+                f'echo -n "{uri}" | {args.clip_command}'
+            ])
+            proc.wait()
 
     return 0
-
 
 # main execution
 if __name__ == "__main__":
