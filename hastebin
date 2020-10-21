@@ -29,25 +29,28 @@ def get_paste(id):
     response = requests.get(paste_url, timeout=timeout)
 
     if response.status_code != requests.codes.ok:
-      return 3, "error: bad response from '{}'".format(paste_url)
+      return 3, f"error: bad response from '{paste_url}'"
 
     return 0, response.content.decode().rstrip()
 
 def post_paste(text):
-    response = requests.post("%s/documents" % url, headers={
-      "Accept": "application/json"}, data=text,
-      timeout=timeout)
+    post_url = f"{url}/documents"
+    response = requests.post(post_url,
+        headers={
+            "Accept": "application/json"
+        },
+        data=text,
+        timeout=timeout)
 
     if response.status_code != requests.codes.ok:
-      return 3, "error: bad response from '{}'".format(paste_url)
+      return 3, f"error: bad response from '{post_url}'"
 
     return 0, response.content.decode().rstrip()
 
 def main():
     help_description = "Upload text from stdin to HASTEBIN_SERVER_URL "
-    help_description += "(default: 'https://hastebin.com'). If "
-    help_description += "[id] is provided, the corresponding paste is fetched "
-    help_description += "and displayed."
+    help_description += f"(default: '{url}'). If [id] is provided, the "
+    help_description += "corresponding paste is fetched and displayed."
     parser = argparse.ArgumentParser(description=help_description)
     parser.add_argument("--clip-command", "-cc",
             metavar="clip_command",
@@ -91,13 +94,13 @@ def main():
             return quit(return_code, response)
         
         data = json.loads(response)
-        uri = f'{url}/{data["key"]}'
-        print(uri)
+        paste_url = f'{url}/{data["key"]}'
+        print(paste_url)
 
         if args.clipboard:
             proc = Popen([
                 "/bin/sh", "-c",
-                f'echo -n "{uri}" | {args.clip_command}'
+                f'echo -n "{paste_url}" | {args.clip_command}'
             ])
             proc.wait()
 
