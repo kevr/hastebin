@@ -50,7 +50,7 @@ def post_paste(text):
 def main():
     help_description = "Upload text from stdin to HASTEBIN_SERVER_URL. "
     help_description += "If [id] is provided,\nthe corresponding paste is "
-    help_description += "fetched and displayed."
+    help_description += "fetched and displayed instead."
     footer = """environment variables:
   HASTEBIN_CLIPPER (default: 'xclip -sel primary')
   HASTEBIN_SERVER_URL (default: 'https://hastebin.com')
