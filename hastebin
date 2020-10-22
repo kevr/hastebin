@@ -35,7 +35,7 @@ def get_paste(id):
         return 1, "error: http connection timed out"
 
     if response.status_code != requests.codes.ok:
-      return 3, f"error: bad response from '{paste_url}'"
+      return 3, f"error: invalid http status code {response.status_code}"
 
     return 0, response.content.decode().rstrip()
 
@@ -55,7 +55,7 @@ def post_paste(text):
         return 1, "error: http connection timed out"
 
     if response.status_code != requests.codes.ok:
-      return 3, f"error: bad response from '{post_url}'"
+        return 3, f"error: invalid http status code {response.status_code}"
 
     return 0, response.content.decode().rstrip()
 
@@ -89,11 +89,14 @@ def main():
     args = parser.parse_args()
 
     if args.id is not None:
-        if args.id[:4] == "http" and args.id[:len(url)] != url:
-            return quit(1,
-                f"error: invalid id provided; URLs must begin with '{url}'")
+        http = False
 
-        paste_id = args.id.split("/")[-1]
+        if args.id[:4] == "http":
+            if args.id[:len(url)] != url:
+                return quit(1, f"error: URLs must begin with '{url}'")
+            http = True
+
+        paste_id = args.id.split("/")[-1] if http else args.id
         if not paste_id:
             return quit(1, "error: no id provided")
 
