@@ -26,7 +26,13 @@ def quit(code, msg):
 
 def get_paste(id):
     paste_url = f"{url}/raw/{id}"
-    response = requests.get(paste_url, timeout=timeout)
+
+    try:
+        response = requests.get(paste_url, timeout=timeout)
+    except requests.exceptions.ReadTimeout as exc:
+        return 1, "error: http request timed out"
+    except requests.exceptions.ConnectTimeout as exc:
+        return 1, "error: http connection timed out"
 
     if response.status_code != requests.codes.ok:
       return 3, f"error: bad response from '{paste_url}'"
@@ -35,12 +41,18 @@ def get_paste(id):
 
 def post_paste(text):
     post_url = f"{url}/documents"
-    response = requests.post(post_url,
-        headers={
-            "Accept": "application/json"
-        },
-        data=text,
-        timeout=timeout)
+
+    try:
+        response = requests.post(post_url,
+            headers={
+                "Accept": "application/json"
+            },
+            data=text,
+            timeout=timeout)
+    except requests.exceptions.ReadTimeout as exc:
+        return 1, "error: http request timed out"
+    except requests.exceptions.ConnectTimeout as exc:
+        return 1, "error: http connection timed out"
 
     if response.status_code != requests.codes.ok:
       return 3, f"error: bad response from '{post_url}'"
@@ -86,7 +98,7 @@ def main():
             return quit(1, "error: no id provided")
 
         return_code, response = get_paste(paste_id)
-        if return_code != 0:
+        if return_code:
             return quit(return_code, response)
         print(response)
     else:
@@ -99,7 +111,7 @@ def main():
             return quit(2, "error: an error occured reading stdin")
 
         return_code, response = post_paste(stdin)
-        if return_code != 0:
+        if return_code:
             return quit(return_code, response)
         
         data = json.loads(response)
