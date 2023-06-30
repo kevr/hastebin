@@ -5,6 +5,9 @@ hastebin
 
 A script for fetching or posting text pastes on https://hastebin.com.
 
+See [Installation](#installation) for instructions on installing this script
+to your system.
+
 ## Usage & Options
 
     usage: hastebin [-h] [--clip-command clip_command] [--clipboard] [id]
@@ -65,3 +68,26 @@ A few environment variables are utilized for defaults.
 * `HASTEBIN_SERVER_URL`: The hastebin URL (default: 'https://hastebin.com')
 * `HASTEBIN_SERVER_TIMEOUT`: The hastebin request timeout (default: 5)
 * `HASTEBIN_CLIPPER`: Default --clip-command
+
+## Installation
+
+The `hastebin` script in this repository can be installed to any location
+in `$PATH` to be used on your system.
+
+Dependencies:
+- python3
+- python3 requests package
+    - https://pypi.org/project/requests/
+    - https://packages.ubuntu.com/search?keywords=python3-requests
+
+To install globally, one can place hastebin in `/usr/local/bin` as root:
+
+    # install -m755 hastebin /usr/local/bin/hastebin
+
+To install locally, one can place hastebin in `~/.local/bin` and add
+`~/.local/bin` to their `$PATH` in shell initialization:
+
+    $ install -m755 hastebin ~/.local/bin/hastebin
+
+An installation script will be provided at some point; for now, these
+methods can be used as workarounds.
