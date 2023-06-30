@@ -151,7 +151,7 @@ def main():
         except UnicodeDecodeError:
             return quit(2, "error: an error occured reading stdin")
 
-        return_code, response = post_paste(stdin, args.token)
+        return_code, response = post_paste(stdin.encode("utf-8"), args.token)
         if return_code:
             return quit(return_code, response)
 
