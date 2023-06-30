@@ -15,6 +15,7 @@ import requests
 
 url = os.environ.get("HASTEBIN_SERVER_URL", "https://hastebin.com")
 timeout = int(os.environ.get("HASTEBIN_SERVER_TIMEOUT", 5))
+github_token = os.environ.get("HASTEBIN_TOKEN", "")
 
 
 def has_data(fd):
@@ -28,11 +29,15 @@ def quit(code, msg):
     return code
 
 
-def get_paste(id):
+def get_paste(id, token):
     paste_url = f"{url}/raw/{id}"
 
     try:
-        response = requests.get(paste_url, timeout=timeout)
+        response = requests.get(
+            paste_url,
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=timeout,
+        )
     except requests.exceptions.ReadTimeout:
         return 1, "error: http request timed out"
     except requests.exceptions.ConnectTimeout:
@@ -44,13 +49,17 @@ def get_paste(id):
     return 0, response.content.decode().rstrip()
 
 
-def post_paste(text):
+def post_paste(text, token):
     post_url = f"{url}/documents"
 
     try:
         response = requests.post(
             post_url,
-            headers={"Accept": "application/json"},
+            headers={
+                "Content-Type": "text/plain",
+                "Accept": "application/json",
+                "Authorization": f"Bearer {token}",
+            },
             data=text,
             timeout=timeout,
         )
@@ -97,11 +106,25 @@ def main():
         help="pipe stdout to --clip-command",
     )
     parser.add_argument(
+        "--token",
+        "-t",
+        metavar="token",
+        default=github_token,
+        help="valid github api token",
+    )
+    parser.add_argument(
         "id",
         nargs="?",
         help="when provided, fetches and displays a hastebin paste",
     )
     args = parser.parse_args()
+
+    if not args.token:
+        return quit(
+            1,
+            "error: interacting with hastebin api requires a valid --token,"
+            " see https://www.toptal.com/developers/hastebin/documentation",
+        )
 
     if args.id is not None:
         http = False
@@ -115,7 +138,7 @@ def main():
         if not paste_id:
             return quit(1, "error: no id provided")
 
-        return_code, response = get_paste(paste_id)
+        return_code, response = get_paste(paste_id, args.token)
         if return_code:
             return quit(return_code, response)
         print(response)
@@ -128,7 +151,7 @@ def main():
         except UnicodeDecodeError:
             return quit(2, "error: an error occured reading stdin")
 
-        return_code, response = post_paste(stdin)
+        return_code, response = post_paste(stdin, args.token)
         if return_code:
             return quit(return_code, response)
 

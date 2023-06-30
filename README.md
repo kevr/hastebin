@@ -5,6 +5,9 @@ hastebin
 
 A script for fetching or posting text pastes on https://hastebin.com.
 
+A hastebin API token is required to use this program. See [Configuration](#configuration)
+regarding `HASTEBIN_TOKEN`. Both uploading and fetching pastes requires this token.
+
 See [Installation](#installation) for instructions on installing this script
 to your system.
 
@@ -68,6 +71,7 @@ A few environment variables are utilized for defaults.
 * `HASTEBIN_SERVER_URL`: The hastebin URL (default: 'https://hastebin.com')
 * `HASTEBIN_SERVER_TIMEOUT`: The hastebin request timeout (default: 5)
 * `HASTEBIN_CLIPPER`: Default --clip-command
+* `HASTEBIN_TOKEN`: A valid hastebin token generated on https://www.toptal.com/developers/hastebin/documentation
 
 ## Installation
 
