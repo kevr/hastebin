@@ -4,60 +4,66 @@
 # Description: A tool which uploads data from stdin to hastebin.com
 # Copyright (C) 2017 Kevin Morris <kevr@0cost.org>
 # Copyright (C) 2020 Denis Zheleztsov <difrex@lessmore.pw>
-import sys
-import os
-import requests
-import json
-from select import select
 import argparse
+import json
+import os
+import sys
+from select import select
 from subprocess import Popen
+
+import requests
 
 url = os.environ.get("HASTEBIN_SERVER_URL", "https://hastebin.com")
 timeout = int(os.environ.get("HASTEBIN_SERVER_TIMEOUT", 5))
 
+
 def has_data(fd):
     """Immediately timed out select poll"""
     return select([fd], [], [], 0.0) == ([fd], [], [])
+
 
 def quit(code, msg):
     """Print message to the STDERR and returns exit code"""
     sys.stderr.write(msg + "\n")
     return code
 
+
 def get_paste(id):
     paste_url = f"{url}/raw/{id}"
 
     try:
         response = requests.get(paste_url, timeout=timeout)
-    except requests.exceptions.ReadTimeout as exc:
+    except requests.exceptions.ReadTimeout:
         return 1, "error: http request timed out"
-    except requests.exceptions.ConnectTimeout as exc:
-        return 1, "error: http connection timed out"
-
-    if response.status_code != requests.codes.ok:
-      return 3, f"error: invalid http status code {response.status_code}"
-
-    return 0, response.content.decode().rstrip()
-
-def post_paste(text):
-    post_url = f"{url}/documents"
-
-    try:
-        response = requests.post(post_url,
-            headers={
-                "Accept": "application/json"
-            },
-            data=text,
-            timeout=timeout)
-    except requests.exceptions.ReadTimeout as exc:
-        return 1, "error: http request timed out"
-    except requests.exceptions.ConnectTimeout as exc:
+    except requests.exceptions.ConnectTimeout:
         return 1, "error: http connection timed out"
 
     if response.status_code != requests.codes.ok:
         return 3, f"error: invalid http status code {response.status_code}"
 
     return 0, response.content.decode().rstrip()
+
+
+def post_paste(text):
+    post_url = f"{url}/documents"
+
+    try:
+        response = requests.post(
+            post_url,
+            headers={"Accept": "application/json"},
+            data=text,
+            timeout=timeout,
+        )
+    except requests.exceptions.ReadTimeout:
+        return 1, "error: http request timed out"
+    except requests.exceptions.ConnectTimeout:
+        return 1, "error: http connection timed out"
+
+    if response.status_code != requests.codes.ok:
+        return 3, f"error: invalid http status code {response.status_code}"
+
+    return 0, response.content.decode().rstrip()
+
 
 def main():
     help_description = "Upload text from stdin to HASTEBIN_SERVER_URL. "
@@ -70,29 +76,38 @@ def main():
 """
 
     parser = argparse.ArgumentParser(
-            description=help_description,
-            epilog=footer,
-            formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument("--clip-command", "-cc",
-            metavar="clip_command",
-            default=os.environ.get("HASTEBIN_CLIPPER", "xclip -sel primary"),
-            help="clipboard command (default: HASTEBIN_CLIPPER)")
-    parser.add_argument("--clipboard", "-c",
-            metavar="clipboard",
-            action="store_const",
-            const=True,
-            default=False,
-            help="pipe stdout to --clip-command")
-    parser.add_argument("id",
-            nargs="?",
-            help="when provided, fetches and displays a hastebin paste")
+        description=help_description,
+        epilog=footer,
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
+    parser.add_argument(
+        "--clip-command",
+        "-cc",
+        metavar="clip_command",
+        default=os.environ.get("HASTEBIN_CLIPPER", "xclip -sel primary"),
+        help="clipboard command (default: HASTEBIN_CLIPPER)",
+    )
+    parser.add_argument(
+        "--clipboard",
+        "-c",
+        metavar="clipboard",
+        action="store_const",
+        const=True,
+        default=False,
+        help="pipe stdout to --clip-command",
+    )
+    parser.add_argument(
+        "id",
+        nargs="?",
+        help="when provided, fetches and displays a hastebin paste",
+    )
     args = parser.parse_args()
 
     if args.id is not None:
         http = False
 
         if args.id[:4] == "http":
-            if args.id[:len(url)] != url:
+            if args.id[: len(url)] != url:
                 return quit(1, f"error: URLs must begin with '{url}'")
             http = True
 
@@ -116,22 +131,25 @@ def main():
         return_code, response = post_paste(stdin)
         if return_code:
             return quit(return_code, response)
-        
+
         data = json.loads(response)
         paste_url = f'{url}/{data["key"]}'
         print(paste_url)
 
         if args.clipboard:
-            proc = Popen([
-                "/bin/sh", "-c",
-                f'echo -n "{paste_url}" | {args.clip_command}'
-            ])
+            proc = Popen(
+                [
+                    "/bin/sh",
+                    "-c",
+                    f'echo -n "{paste_url}" | {args.clip_command}',
+                ]
+            )
             proc.wait()
 
     return 0
+
 
 # main execution
 if __name__ == "__main__":
     e = main()
     exit(e)
-
